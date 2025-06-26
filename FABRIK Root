@@ -1,0 +1,51 @@
+FABRIK Root
+Multi-effector FABRIK system.
+FABRIKRoot is a component that connects FABRIK chains together to form extremely complicated IK systems with multiple branches, end-effectors and rotation limits.
+
+
+
+Getting started:
+
+Create multiple FABRIK chains, position them as you want them to be connected. The chains don't have to be parented to each other
+Make sure the first bone of a child chain is in the same position as the last bone of its parent
+Create a new GameObject, add the FABRIKRoot component
+Add all the FABRIK chains to "Chains" in the FABRIKRoot component
+Press Play
+
+
+Accessing the chains of FABRIKRoot:
+
+public FABRIKRoot fabrikRoot;
+void LateUpdate () {
+    Debug.Log(fabrikRoot.solver.chains[index].ik.name);
+}
+
+
+Limitations:
+
+Separate FABRIK chains can not use the same bones, they must be fully independent
+The last bone of a FABRIK chain must be in the same position as its child chain's first bone
+FABRIKRoot.png
+FABRIK Root chain being pulled
+
+
+Component variables:
+
+fixTransforms - if true, will fix all the Transforms used by the solver to their initial state in each Update. This prevents potential problems with unanimated bones and animator culling with a small cost of performance
+
+
+Solver variables:
+
+weight - the solver weight for smoothly blending out the effect of the IK
+iterations - max iterations per frame.
+rootPin - the weight of pinning the first chains to the Transform that the component is attached to
+chains - the list of FABRIK components used by this FABRIKRoot
+
+
+Chain variables:
+
+IK - the FABRIK component used
+pull - parent pull weight. How much does this chain pull its parent?
+pin - resistance to being pulled by child chains. If 1, this chain can not be pulled out of place by its child chains
+children - indexes (of the "Chains" array) of the direct children of this chain. Don't add children of the children.
+FABRIKRootComponent.png
