@@ -1,0 +1,53 @@
+Trigonometric IK
+Trigonometric IK is the most basic IK solver that is based on the Law of Cosines and solves a 3-segmented bone hierarchy. (IKSolverLimb extends IKSolverTrigonometric just to add a couple of extra parameters like the bend modifiers)
+
+
+
+Getting started:
+
+Add the TrigonometricIK component to the first bone.
+Assign bone1, bone2 and bone3 in the TrigonometricIK component
+Press Play
+
+
+Getting started with scripting:
+
+public TrigonometricIK trig;
+void LateUpdate () {
+    // Changing the target position, rotation and weights
+    trig.solver.IKPosition = something;
+    trig.solver.IKRotation = something;
+    trig.solver.IKPositionWeight = something;
+    trig.solver.IKRotationWeight = something;
+    trig.solver.SetBendGoalPosition(Vector goalPosition); // Sets the bend goal to a point in world space 
+}
+
+
+Adding TrigonometricIK in runtime:
+
+Add the TrigonometricIK component via script
+Call TrigonometricIK.solver.SetChain()
+TrigonometricIK.png
+
+
+Component variables:
+
+fixTransforms - if true, will fix all the Transforms used by the solver to their initial state in each Update. This prevents potential problems with unanimated bones and animator culling with a small cost of performance
+
+
+Solver variables:
+
+bone1 - the first bone (upper arm or thigh)
+bone2 - the second bone (forearm or calf)
+bone3 - the third bone (hand or foot)
+target - the target Transform. If assigned, solver IKPosition and IKRotation will be automatically set to the position of the target
+positionWeight - the weight of solving to the target position (IKPosition)
+rotationWeight - the weight of solving to the target rotation (IKRotation)
+bendNormal - normal of the plane defined by the positions of the bones. When the limb bends, the second bone will always be positioned somewhere on that plane
+TrigonometricIKComponent.png
+
+
+Script References:
+
+Solver
+Component
