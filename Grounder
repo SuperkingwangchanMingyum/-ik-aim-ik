@@ -1,0 +1,100 @@
+Grounder
+Grounder is an automatic vertical foot placement and alignment correction system.
+
+How does it work?
+
+The solver works on a very basic principle: The characters are animated on planar ground. The height and rotation of the feet, as they are animated, should only be offset by the difference of ground height at their ingame positions from the root height.
+
+Let's sample a frame in the animation, where the character's left foot y position is 0.1. Ingame, the Grounding solver will make some raycasting to find the real ground height at the left foot's position. Let's say that the raycasting returns 0.2. If the character's ingame y position is 0, the ground height at the foot's position relative to the character root is 0.2. The foot must be vertically offset by that exact value, ending up at 0.3.
+
+This approach guarantees minimal interference with the animation, because the feet will only be offset when the ground height at their positions differ from the character root's height. If that offset is negative, meaning ground height at the foot position is lower, then the solver needs to pull down the character from the pelvis so that the feet could reach their offset targets.
+
+GrounderHowItWorks.png
+
+
+Getting started:
+
+
+Create an empty GameObject, parent it to the root of the character, set its localPosition and localRotation to zero,
+Add GrounderFBBIK, GrounderBipedIK, GrounderIK or GrounderQuadruped depending on the type of the character to that GameObject.
+Assign all the empty fields and the ground layers in the Grounder component
+Make sure the character collider's layer is not in the walkable layers
+
+
+Solver variables:
+
+layers - the layers to walk on. Make sure to exclude the character's own layer.
+maxStep - maximum offset for the feet. Note that the foot's animated height is subtracted from that range, meaning if the foot height relative to the root is already animated at 0.4, and the max step is 0.5, it can only be offset by 0.1.
+heightOffset - offsets the character from the original animated height, this might be useful for minor corrections in that matter.
+footSpeed - the interpolation speed of the foot. Increasing it will increase accuracy with the cost of smoothness (range: 0 - inf).
+footRadius - the size of the feet. This has no effect with the fastest quality settings (range: 0.0001 - inf).
+prediction - the prediction magnitude. The prediction is based on the velocity vector of the feet. Increasing this value makes the feet look for obstacles farther on their path, but with the cost of smoothness (range: 0 - inf).
+footRotationWeight - the weight off offsetting the rotation of the feet (range: 0 - 1).
+footRotationSpeed - the speed of interpolating the foot offset (range: 0 - inf).
+maxFootRotationAngle - the maximum angle of foot offset (range: 0 - 90).
+rotateSolver - if true, will use the character's local up vector as the vertical vector for the solver and the character will be able to walk on walls and ceilings. Leave this off when not needed for performance considerations.
+pelvisSpeed - the interpolation speed of the pelvis. Increasing this will make the character's body move up/down faster. If you don't want the pelvis to move (usually spider types) set this to zero (range: 0 - inf).
+pelvisDamper - dampering the vertical motion of the character's root. This is only useful when the root is moving too violently because of the physics and you wish to make the vertical movement smoother (range: 0 - 1).
+lowerPelvisWeight - the weight of moving the pelvis down to the lowest foot. This moves the pelvis down when the character walks down the stairs and needs to reach a lower step.
+liftPelvisWeight - the weight of moving the pelvis up to the highest foot. This moves the pelvis up when the character steps on a higher obstacle. Use this when the character is crouching.
+rootSphereCastRadius - the radius of the root sphere cast. This has no effect with the "Fastest" and "Simple" quality settings.
+quality - the quality mainly determines the weight of ray/sphere/acpsule casting. The Fastest will only make a single raycast for each foot, plus a raycast for the root. Simple will make 3 raycasts for each foot, plus a raycast for the root. The Best quality settings means 1 raycast and a capsule cast for each foot and a sphere cast for the root.
+
+
+Grounder Components
+
+GrounderFBBIK
+
+GrounderFBBIK uses the FullBodyBipedIK component for offsetting the feet and optionally bending the spine. This is most useful if your character already has some FBBIK functionality and you need the component anyway. GrounderFBBIK uses the positionOffset of the effectors so you can still pin the feet without a problem if necessary.
+
+Component variables:
+
+weight - the master weight. The effect of the Grounder can be smoothly faded out for better performance when not needed.
+spineBend - the amount of bending the spine. The spine will be bent only when the character is facing a slope or stairs. Negative value will invert the effect.
+spineSpeed - the speed of bending the spine (range: 0 - inf).
+spine - the FBBIK effectors involved in bending the spine and their horizontal/vertical weights.
+GrounderFBBIKComponent.png
+GrounderBipedIK
+
+GrounderBipedIK uses the BipedIK component for offsetting the feet and optionally bending the spine. With BipedIK you will not have to manually set up the IK components for the limbs.
+
+Component variables:
+
+weight - the master weight. The effect of the Grounder can be smoothly faded out for better performance when not needed.
+spineBend - the amount of bending the spine. The spine will be bent only when the character is facing a slope or stairs. Negative value will invert the effect.
+spineSpeed - the speed of bending the spine (range: 0f - inf).
+GrounderBipedIKComponent.png
+GrounderIK
+
+GrounderIK can use any number and combination of CCD, FABRIK, LimbIK, or TrigonometricIK components for offsetting the limbs. This is most useful for spider/bot types of characters that have more than 2 legs connected to a single hub.
+
+Component variables:
+
+weight - the master weight. The effect of the Grounder can be smoothly faded out for better performance when not needed.
+legs - the IK components. Can be any number or combination of CCD, FABRIK, LimbIK or TrigonometricIK connected to the same pelvis.
+pelvis - the pelvis Transform. This should be the upmost common parent of the legs and the spine.
+characterRoot - this is only necessary if you wish to use the root rotation functionality. Root rotation will rotate the character root to the ground normal.
+rootRotationWeight - the weight of root rotation (range: 0 - 1).
+rootRotationSpeed - the speed of root rotation interpolation (range: 0 - inf).
+maxRootRotationAngle - the maximum angle of rotating the characterRoot.up from the default Vector3.up (range: 0 - 90).
+GrounderIKComponent.png
+GrounderQuadruped
+
+GrounderQuadruped uses 2 Grounding solvers. That means 2 hubs that can have any number of legs.
+
+Component variables:
+
+weight - the master weight. The effect of the Grounder can be smoothly faded out for better performance when not needed.
+forelegSolver - the Grounding solver for the forelegs.
+characterRoot - this is only necessary if you wish to use the root rotation functionality. Root rotation will rotate the character root up or down depending on the ground.
+rootRotationWeight - the weight of root rotation. If the quadruped is standing on an edge and leaning down with the forelegs entering the ground, you need to increase this value and also the root rotation limits (range: 0 - 1).
+rootRotationSpeed - the speed of root rotation interpolation (range: 0 - inf).
+minRootRotation - the maximum angle of rotating the quadruped downwards (going downhill, range: -90 - 0).
+maxRootRotation - the maximum angle of rotating the quadruped upwards (going uphill, range: 0 - 90).
+pelvis - the pelvis Transform. This should be the upmost common parent of the legs and the spine.
+lastSpineBone - the last bone in the spine that is the common parent of the forelegs.
+maxLegOffset - the maximum offset of the legs from their animated positions. This enables you to set maxStep higher without the feet getting inverted (range: 0 - inf).
+maxForelegOffset - the maximum offset of the forelegs from their animated positions. This enables you to set maxStep higher without the forefeet getting inverted (range: 0 - inf).
+head - the head Transform, if you wish to maintain its rotation as animated.
+maintainHeadRotationWeight - the weight of maintaining the head's rotation as animated (range: 0 - 1).
+GrounderQuadrupedComponent.png
