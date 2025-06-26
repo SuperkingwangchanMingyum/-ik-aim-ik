@@ -1,0 +1,97 @@
+Extending Final IK
+The IK solvers and rotation limits of FinalIK were built from the ground up with extendability in mind.
+Some of the components of FinalIK, such as BipedIK, are essentially little more than just collections of IK solvers.
+
+Writing Custom IK Components
+
+Before you can exploit the full power of FinalIK, it is important to know a few things about its architecture.
+
+The difference between IK components and IK solvers:
+By architecture, IK solver is a class that actually contains the inverse kinematics functionality, while the function of an IK component is only to harbor, initiate and update its solver and provide helpful scene view handles as well as custom inspectors.
+Therefore, IK solvers are fully independent of their components and can even be used without them through direct reference:
+
+using RootMotion.FinalIK;
+public IKSolverCCD spine = new IKSolverCCD();
+public IKSolverLimb limb = new IKSolverLimb();
+void Start() {
+    // The root transform reference is used in the initiation of IK solvers for multiple reasons depending on the solver.
+    // heuristic solvers IKSolverCCD, IKSolverFABRIK and IKSolverAim only need it as context for logging warnings, 
+    // character solvers IKSolverLimb, IKSolverLookAt, BipedIK and IKSolverFullBodyBiped use it to define their orientation relative to the character,
+    // IKSolverFABRIKRoot uses it as the root of all of its FABRIK chains.
+    spine.Initiate(transform);
+    limb.Initiate(transform);
+}
+void LateUpdate() {
+    // Updating the IK solvers in a specific order.
+    // In the case of multiple IK solvers handling a bone hierarchy, it is usually wise to solve the parents first.
+    spine.Update();
+    limb.Update();
+}
+You now have essentially a custom IK component.
+This can be helpful if you needed to keep all the functionality of your IK system in a single component, like BipedIK, so you would not have to manage many different IK components in your scene.
+
+Writing Custom Rotation Limits
+
+All rotation limits in Final IK extend from the abstract RotationLimit class. To compose your own, you would as well need to extend from this base class and override the abstract method
+
+protected abstract Quaternion LimitRotation(Quaternion rotation); 
+In this method you will have to apply the constraint to and return the input Quaternion.
+It is important to note that the input Quaternion is already converted to the default local rotation space of the gameobject, meaning if you return Quaternion.identity, the gameobject will always remain fixed to its initial local rotation.
+
+The following code could be a template for a custom rotation limit:
+
+using RootMotion.FinalIK;
+// Declaring the class and extending from RotationLimit.cs
+public class RotationLimitCustom: RotationLimit {
+    
+    // Limits the rotation in the local space of this instance's Transform.
+    protected override Quaternion LimitRotation(Quaternion rotation) {      
+        return MyLimitFunction(rotation);
+    }
+}
+The new rotation limit gets recognized and applied automatically by all constrainable IK solvers.
+
+Combining IK Components
+
+When creating more complex IK systems, you will probably need full control over the updating order of your solvers. To do that, you can just disable their components and manage their solvers from an external script.
+All IK components extend from the abstract IK class and all IK solvers extend from the abstract IKSolver class. This enables you to easily handle or replace the solvers even without needing to know the specific type of the solver.
+Controlling the updating order of multiple IK components:
+
+
+using RootMotion.FinalIK;
+// Array of IK components that you can assign from the inspector. 
+// IK is abstract, so it does not matter which specific IK component types are used.
+public IK[] components;
+    
+void Start() {
+    // Disable all the IK components so they won't update their solvers. Use Disable() instead of enabled = false, the latter does not guarantee solver initiation.
+    foreach (IK component in components) component.Disable();
+}
+void LateUpdate() {
+    // Updating the IK solvers in a specific order. 
+    foreach (IK component in components) component.GetIKSolver().Update();
+}
+Animate Physics
+When your character has Animate Physics checked (UpdateMode.AnimatePhysics since Unity 4.5), you will need to check if a FixedUpdate has been called before updating the IK solvers in LateUpdate. Otherwise the IK solvers will be updated multiple times before the Animator/Animation overwrites the pose and accumulate resulting in a high frequency flicker. So the way to update the solvers with Animate Physics would be like this;
+
+using RootMotion.FinalIK;
+// Array of IK components that you can assign from the inspector. 
+// IK is abstract, so it does not matter which specific IK component types are used.
+public IK[] components;
+private bool updateFrame;
+    
+void Start() {
+    // Disable all the IK components so they won't update their solvers. Use Disable() instead of enabled = false, the latter does not guarantee solver initiation.
+    foreach (IK component in components) component.Disable();
+}
+void FixedUpdate() {
+    updateFrame = true;
+}
+void LateUpdate() {
+    // Do nothing if FixedUpdate has not been called since the last LateUpdate
+    if (!updateFrame) return;
+    updateFrame = false;
+    
+    // Updating the IK solvers in a specific order. 
+    foreach (IK component in components) component.GetIKSolver().Update();
+}
