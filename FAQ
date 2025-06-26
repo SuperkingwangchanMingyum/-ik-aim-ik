@@ -1,0 +1,48 @@
+FAQ
+FullBodyBipedIK
+
+- Can I use FBBIK to create animation clips for my character, how does it save the animation clips?
+FBBIK is not designed for animation authoring, but for runtime animation modification, meaning it will run on top of whatever animation you have to provide you more flexibility and accuracy when interacting with ingame objects and other character.
+For example if your character is climbing a wall, you can apply Full Body IK on top of it to make sure your hands and feet always remain fixed to the ledges.
+Since Final IK v1.9 the package includes a baking tool that can be used to create Humanoid, Generic and Legacy animation clips from your custom IK procedures, Timeline, Mecanim layer setup, etc...
+
+- Hope that this will not only work with a special 3d program. Is there any information on how to export from a 3D animation package?
+Final IK has nothing to do with any 3D animation packages. You would animate and export your animation clips just like you are doing it now,
+the IK components will just provide a library of possibilities for extending, modifying and characterising those animations.
+The primary function of Full Body IK is not providing a rig for creating animations in Unity from scratch, it is modifying the existing animations
+and retargeting specific body parts to match the dynamic realtime environment.
+It will dramatically reduce the amount of animation work you will have to do for your game.
+
+- This system actually allows to have completly non-animated animations that are run only from scripts right?
+Yes.
+
+- Compared to mocap, what can I expect with the IK-based animations from your system?
+IK animation can not be compared to mocap, ideally they should work together, not replace each other.
+Procedural IK only takes you so far. If you are aiming for real AAA quality and you want to compare your game with the Assassins Creed or Max Payne 3, you'll still need top notch mocap base animation.
+
+- Does Mecanim work better than Legacy in conjunction with Final IK or if it doesn't matter which system to use all?
+It does not matter at all, go with what you prefer.
+
+- Can we tween in and out of an IK'd pose?
+Yes, we can!
+
+- Can I remove/add limbs to or from FBBIK?
+No, not yet at least. In the current version, you can't detach a limb AND continue using Full Body IK. You can disable FBBIK and then detach the limb (which is fine in 99% of the use cases because the character would usually just die), but you can't use the solver after you have deleted the bones. If there is a way to get rid of the limb geometry, but maintain the bones, then there is no problem, but remember, no removing the bones. I hope to overcome that limitation in the full release. Same goes for adding extra limbs. You can still use a seperate CCD/FABRIK or Limb IK component on the extra limb if you need to.
+
+- Can it actually work perfectly upside down?
+Yes it works upside down, you can rotate the characters however you like and still use IK.
+
+- Does Final IK allow you to rig a 3D mesh that does not have any bones?
+No, it needs to have bones and skinning.
+
+- Can I use Rotation Limits with Full Body Biped IK?
+Rotation Limits can be used with the CCD, FABRIK and Aim IK components, FBBIK has its own dedicated constraints that keep the limbs bending in the right direction and the spine from collapsing into itself.
+
+Misc
+
+- Do you think FABRIK can be used for simulating hair or a piece of cloth on a biped?
+Yes FABRIK theoretically can be used to simulate cloth or hair. But in a future release, I'm planning to include Particle IK, which would probably be more suitable for this, as it is the de facto standard for those kinds of simulations.
+
+- Does Final IK work with 2D?
+AimIK, CCDIK, FABRIK, TrigonometricIK, LimbIK, ArmIK and LegIK can be constrained to 2D. FullBodyBipedIK and VRIK can not be used on 2D characters.
+
