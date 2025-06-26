@@ -1,0 +1,61 @@
+Biped IK
+IK system for standard biped characters that is designed to replicate and enhance the behaviour of the Unity's built-in character IK setup.
+
+BipedIK or FullBodyBipedIK?
+Originally the only benefit of BipedIK over FullBodyBipedIK was its much better performance. However, since FinalIK 0.4, we are able to set FBBIK solver iteration count to 0, in which case the full body effect will not be solved and it is almost as fast as BipedIK. This allows for much easier optimization of IK on characters in the distance. Therefore, since 0.4, FullBodyBipedIK component is the recommended solution for solving biped characters.
+
+BipedIK or Unity's Animator IK?
+
+Animator IK does not allow the modifiaction of any of even the most basic solver parameters, such as limb bend direction, which makes the system difficult, if not impossible to use or extend in slightly more advanced use cases. Even in the simplest of cases, Animator can produce unnatural poses or bend a limb in unwanted direction and there is nothing that can be done to work around the problem.
+Animator IK lacks a spine solver.
+Animator's LookAt functionality can often solve to weird poses such as bending the spine backwards when looking over the shoulder.
+BipedIK also incorporates AimIK.
+BipedIK does NOT require Unity Pro.
+To simplify migration from Unity's built-in Animator IK, BipedIK supports the same API, so you can just go from animator.SetIKPosition(...) to bipedIK.SetIKPosition(...).
+
+BipedIK, like any other component in the FinalIK package, goes out of its way to minimize the work required for set up. BipedIK automatically detects the biped bones based on the bone structure of the character and the most common naming conventions, so unless you have named your bones in Chinese, you should have BipedIK ready for work as soon as you can drop in the component. If BipedIK fails to recognize the bone references or you just want to change them, you can always manage the references from the inspector.
+
+BipedIK.png
+
+
+Getting started:
+
+Add the BipedIK component to the root of your character (the same GameObject that has the Animator/Animation component)
+Make sure the auto-detected biped references are correct
+Press play, weigh in the solvers
+
+
+Accessing the solvers of Biped IK:
+
+public BipedIK bipedIK;
+void LateUpdate () {
+    bipedIK.solvers.leftFoot.IKPosition = something;
+    bipedIK.solvers.spine.IKPosition = something;
+    ...
+}
+
+
+Adding BipedIK in runtime:
+
+Add the BipedIK component via script
+Assign BipedIK.references
+Optionally call BipedIK.SetToDefaults() to set the parameters of the solvers to default BipedIK values. Otherwise default values of each solver are used.
+
+
+Component variables:
+
+fixTransforms - if true, will fix all the Transforms used by the solver to their initial state in each Update. This prevents potential problems with unanimated bones and animator culling with a small cost of performance
+references - references to the character bones that BipedIK needs to build its solver.
+
+
+Solver variables:
+
+Left Foot
+Right Foot
+Left Hand
+Right Hand
+Spine
+Aim
+Look At
+Pelvis - Pos Offset and Rot Offset can be used to offset the pelvis of the character from its animated position/rotation. Pos Weight and Rot Weight can be used to translate and rotate the pelvis to bipedIK.solvers.pelvis.position and bipedIK.solvers.pelvis.rotation.
+BipedIKComponent.png
