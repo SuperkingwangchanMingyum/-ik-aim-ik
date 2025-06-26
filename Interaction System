@@ -1,0 +1,174 @@
+Interaction System
+The Interaction System is designed for the easy setup of full body IK interactions with the dynamic game environment. It requires a character with FullBodyBipedIK and consists of 3 main components: InteractionSystem, InteractionObject and InteractionTarget.
+
+
+
+Getting started:
+
+
+
+
+
+Add the InteractionSystem component to a FBBIK character
+Add the InteractionObject component to an object you wish to interact with
+Create a PositionWeight weight curve, that consists of 3 keyframes {(0, 0), (1, 1), (2, 0)}, where x is horizontal and y is vertical value.
+Add the InteractionSystemTestGUI component to the character and fill out its fields for quick debugging of the interaction
+Play the scene and press the GUI button to start the interaction
+
+
+Getting started with scripting:
+
+
+
+using RootMotion.FinalIK;
+public InteractionSystem interactionSystem; // Reference to the InteractionSystem component on the character
+public InteractionObject button; // The object to interact with
+public bool interrupt; // If true, interactions can be called before the current interaction has finished
+void OnGUI() {
+    // Starting an interaction
+    if (GUILayout.Button("Press Button")) {
+        interactionSystem.StartInteraction(FullBodyBipedEffector.RightHand, button, interrupt);
+    }
+}
+See the API reference of the Interaction System for all the interaction functions. See the Interaction demo scene and the InteractionDemo.cs for more examples.
+
+Components of the Interaction System
+
+InteractionSystem
+
+This component should be added to the same game object that has the FBBIK component. It is the main driver and the main interface for controlling the interactions of its character.
+
+Component variables:
+
+targetTag - if not empty, only the targets with the specified tag will be used by this interaction system. This is useful if there are characters in the game with different bone orientations.
+fadeInTime - the time of fading in all the channels used by the interaction (weight of the effector, reach, pull..)
+speed - the master speed for all interactions of this character.
+resetToDefaultsSpeed - if > 0, lerps all the FBBIK channels used by the Interaction System back to their default or initial values when not in interaction.
+collider the collider that registers OnTriggerEnter and OnTriggerExit events with InteractionTriggers.
+camera will be used by Interaction Triggers that need the camera's position. Assign the first person view character camera.
+camRaycastLayers the layers that will be raycasted from the camera (along camera.forward). All InteractionTrigger look at target colliders should be included.
+camRaycastDistance max distance of raycasting from the camera.
+fullBody - reference to the FullBodyBipedIK component.
+lookAt - Look At uses a LookAtIK component to automatically turn the body/head/eyes to the Interaction Object.
+iK - reference to the LookAtIK component,
+lerpSpeed - the speed of interpolating the LookAtIK target to the position of the Interaction Objectm
+weightSpeed - the speed of weighing in/out the LookAtIK weight.
+InteractionSystemComponent.png
+
+
+InteractionObject
+
+This component should be added to the game objects that we wish to interact with. It contains most of the information about the nature of the interactions. It does not specify which body part(s) will be used, but rather the look and feel and the animation of the interaction. That way the characteristics of an interaction are defined by the object and can be shared between multiple effectors. So for instance a button will be pressed in the same manner, regardless of which effector is used for it.
+
+Animating Interaction Objects:
+The Interaction System introduces the concept of animating objects rather than animating characters. So instead of animating a character opening a door or pressing a button, we can just animate the door opening or the button being pressed and have the Interaction System move the character to follow that animation. This approach gives us great freedom over the dynamics of the interactions, even allowing for multiple simultaneous animated interactions. You can animate an Interaction Object with the dope sheet and then call that animation by using the OnStartAnimation, OnTriggerAnimation, OnReleaseAnimation and OnEndAnimation animator events that you can find on the InteractionObject component.
+
+Component variables:
+
+otherLookAtTarget - the look at target. If null, will look at this GameObject. This only has an effect when the InteractionLookAt component is used.
+otherTargetsRoot - the root Transform of the InteractionTargets. That will be used to automatically find all the InteractionTarget components, so all the InteractionTargets should be parented to that.
+positionOffsetSpace - if assigned, all PositionOffset channels will be applied in the rotation space of this Transform. If not, they will be in the rotation space of the character.
+weightCurves - The weight curves define the process of the interaction. The interaction will be as long as the longest weight curve in that list. The horizontal value of the curve represents time since the interaction start. The vertical value represents the weight of its channel. So if we had a weight curve for PositionWeight with 3 keyframes {(0, 0), (1, 1), (2, 0)} where a keyframe represents (time, value), then the positionWeight of an effector will reach 1 at 1 second from the interaction start and fall back to 0 at 2 secods from the interaction start. The curve types stand for the following:
+PositionWeight - IKEffector.positionWeight,
+RotationWeight - IKEffector.rotationWeight,
+PositionOffsetX - X offset from the interpolation direction relative to the character rotation,
+PositionOffsetY - Y offset from the interpolation direction relative to the character rotation,
+PositionOffsetZ - Z offset from the interpolation direction relative to the character rotation,
+Pull - pull value of the limb used in the interaction (FBIKChain.pull),
+Reach - reach value of the limb used in the interaction (FBIKChain.reach),
+RotateBoneWeight - rotating the bone after FBBIK is finished. In many cases using this instead of RotationWeight will give you a more stable and smooth looking result.
+Push - push value of the limb used in the interaction (FBIKChain.push),
+PushParent - pushParent value of the limb used in the interaction (FBIKChain.pushParent),
+PoserWeight - weight of the hand/generic Poser.
+multipliers - the weight curve multipliers are designed for reducing the amount of work with AnimationCurves. If you needed the rotationWeight curve to be the same as the positionWeight curve, you could use a multipier instead of duplicating the curve. In that case the multiplier would look like this: Curve = PositionWeight, Multiplier = 1 and Result = RotationWeight. If null, will use the InteractionObject game object.
+events - events can be used to trigger animations, messages, interaction pause or pick-ups at certain time since interaction start.
+time - time of triggering the event (since interaction start),
+pause - if true, will pause the interaction on this event. The interaction can be resumed by calling InteractionSystem.ResumeInteraction(FullBodyBipedEffector effectorType) or InteractionSystem.ResumeAll(),
+pickUp - if true, the Interaction Object will be parented to the bone of the interacting effector. This only works as expected if a single effector is interacting with this object. For 2-handed pick-ups please see the "Interaction PickUp2Handed" demo,
+animations - the list of animations called on this event. The "Animator" or "Animation" refers to the the animator component that the "Animation State" cross-fade (using "Cross Fade Time") will be called upon. "Layer" is the layer of the Animation State and if "Reset Normalized Time" is checked, the animation will always begin from the start.
+messages - the list of messages sent on this event (using GameObject.SendMessage(), all messages require a receiver). "Function" is the name of the function called on the "Recipient" game object.
+InteractionObjectComponent.png
+
+
+InteractionTarget
+
+If the Interaction Object has no Interaction Targets, the position and rotation of the Interaction Object itself will be used for all the effectors as the target. However if you needed to pose a hand very precisely, you will need to create an Interaction Target. Normally you would first pose a duplicate of the character's hand, parent it to the Interaction Object and add the InteractionTarget component. The Interaction Objects will automatically find all the Interaction Targets in their hierarchies and use them for the corresponding effectors.
+
+InteractionTarget.png
+Working with Interaction Targets:
+
+See this tutorial video
+Duplicate your character, position and pose a hand to the Interaction Object
+Parent the hand hierarchy to the Interaction Object, delete the rest of the character
+Add the InteractionTarget component to the hand bone, fill out its fields
+Add the HandPoser (or GenericPoser) component to the hand bone of the character (not the hand that you just posed). That will make the fingers match the posed target.
+Play the scene to try out the interaction
+Component variables:
+
+effectorType - the type of the FBBIK effector that this target corresponds to
+multipliers - the weight curve multipliers enable you to override weight curve values for different effectors.
+interactionSpeedMlp - this enables you to change the speed of the interaction for different effectors.
+pivot - the pivot to twist/swing this interaction target about (The blue dot with an axis and a circle around it on the image above). Very often you would want to acces an object from any angle, the pivot enables the Interaction System to rotate the target to face the direction towards the character.
+twistAxis - the axis of twisting the interaction target (The blue axis on the image above. The circle visualizes the twist rotation).
+twistWeight - the weight of twisting the interaction target towards the effector bone in the start of the interaction.
+swingWeight - the weight of swinging the interaction target towards the effector bone in the start of the interaction. This will make the direction from the pivot to the InteractionTarget match the direction from the pivot to the effector bone.
+rotateOnce - if true, will twist/swing around the pivot only once at the start of the interaction
+InteractionTargetComponent.png
+
+
+InteractionTrigger
+
+With most Interaction Objects, there is a certain angular and positional range in which they are naturally accessible and reachable to the character. For example, a button can only be pressed with a left hand if the character is within a reasonable range and more or less facing towards it. The Interaction Trigger was specifically designed for the purpose of defining those ranges for each effector and object.
+
+InteractionTriggerDoor.png
+The image above shows an InteractionTrigger defining the ranges of interaction with a door handle for the left hand and for the right hand."
+The green sphere is the trigger Collider on the game object that will register this InteractionTrigger with the InteractionSystem of the character.
+The circle defines the range of position in which the character is able to interact with the door.
+The purple range defines the angular range of character forward in which it is able to open the door with the right hand, the pink range is the same for the left hand.
+
+Getting started
+
+Add the InteractionSystem component to the character,
+make sure the game object that has the InteractionSystem component also has a Collider and a Rigidbody,
+create an InteractionObject to interact with, add a weight curve, for example {(0, 0), (1, 1), (2, 0)}, for PositionWeight,
+create an empty game object, name it "Trigger", parent it to the Interaction Object, add the InteractionTrigger component,
+add a trigger collider to the InteractionTrigger component, make sure it is able to trigger OnTriggerEnter calls on the InteractionSystem game object,
+assign the InteractionObject game object to InteractionTrigger's "Target". That will be the reference of direction from the trigger to the object,
+add a "Range", add an "Interaction" to that range, assign the InteractionObject to the "Interaction Objet",
+specify the FBBIK effector that you want to use for the interaction,
+set "Max Distance" to something like 1 (you can see it visualized with a circle in the Scene view),
+set "Max Angle" to 180, so you can trigger the interaction from any angle,
+follow the instructions below to create a script that controls the triggering (see UserControlInteractions.cs for a full example):
+The InteractionSystem will automatically maintain a list of triggers that the character's collider is in contact with. That list can be accessed by InteractionSystem.triggersInRange; That list contains only the triggers that have a suitable effector range for the current position and rotation of the character.
+
+You can find the closest trigger for the character by:
+
+int closestTriggerIndex = interactionSystem.GetClosestTriggerIndex();
+if GetClosestTriggerIndex returns -1, there are no valid triggers currently in range. If not, you can trigger the interaction by
+
+interactionSystem.TriggerInteraction(closestTriggerIndex, false);
+See the Interaction Trigger demo scene and the UserControlInteractions.cs script for a full example on how to make the Interaction Triggers work.
+
+Component variables
+
+ranges - the valid ranges of the character's and/or its camera's position for triggering interaction when the character is in contact with the collider of this trigger.
+characterPosition - The range for the character's position and rotation.
+use - if false, will not care where the character stands, as long as it is in contact with the trigger collider.
+offset - the offset of the character's position relative to the trigger in XZ plane. Y position of the character is unlimited as long as it is contact with the collider.
+angleOffset - angle offset from the default forward direction.
+maxAngle - max angular offset of the character's forward from the direction of this trigger.
+radius - max offset of the character's position from this range's center.
+orbit - if true, will rotate the trigger around its Y axis relative to the position of the character, so the object can be interacted with from all sides.
+fixYAxis - fixes the Y axis of the trigger to Vector3.up. This makes the trigger symmetrical relative to the object. For example a gun will be able to be picked up from the same direction relative to the barrel no matter which side the gun is resting on.
+cameraPosition - The range for the character camera's position and rotation.
+lookAtTarget - what the camera should be looking at to trigger the interaction?
+direction - the direction from the lookAtTarget towards the camera (in lookAtTarget's space).
+maxDistance - max distance from the lookAtTarget to the camera.
+maxAngle - max angle between the direction and the direction towards the camera.
+fixYAxis - fixes the Y axis of the trigger to Vector3.up. This makes the trigger symmetrical relative to the object.
+interactions - the definitions of interactions that will be called on InteractionSystem.TriggerInteraction.
+InteractionTriggerComponent.png
+InteractionTriggerRightHand.png
+Valid position of the character without 'Orbit'
+InteractionTriggerRightHandOrbit.png
+Valid positions of the character with 'Orbit'
