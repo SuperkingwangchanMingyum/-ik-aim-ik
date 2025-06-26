@@ -1,0 +1,59 @@
+FABRIK
+Forward and Backward Reaching Inverse Kinematics solver based on the paper:
+"FABRIK: A fast, iterative solver for the inverse kinematics problem."
+Aristidou, A., Lasenby, J. Department of Engineering, University of Cambridge, Cambridge CB2 1PZ, UK.
+
+FABRIK is a heuristic solver that can be used with any number of bone segments and rotation limits. It is a method based on forward and backward iterative movements by finding a joint's new position along a line to the next joint. FABRIK proposes to solve the IK problem in position space, instead of the orientation space, therefore it demonstrates less continuity under orientation constraints than CCD, although certain modifications have been made to the constraining method described in the original paper to improve solver stability. It generally takes less iterations to reach the target than CCD, but is slower per iteration especially with rotation limits applied.
+
+FABRIK is extremely flexible, it even allows for direct manipulation of the bone segments in the scene view and the solver will readapt. Bone lengths can also be changed in runtime. Monitoring and validating the IK chain each frame would be expensive on the performance, therefore changing the bone hierarchy in runtime has to be done by calling SetChain (Transform[] hierarchy) on the solver. SetChain returns true if the hierarchy is valid.
+
+
+
+Getting started:
+
+Add the FABRIK component to the first GameObject in the chain
+Assign all the elements in the chain to "Bones" in the component
+Press Play, set weight to 1
+
+
+Changing the target position:
+
+public FABRIK fabrik;
+void LateUpdate () {
+    fabrik.solver.IKPosition = something;
+}
+
+
+Adding FABRIK in runtime:
+
+Add the FABRIK component via script
+Call FABRIK.solver.SetChain()
+
+
+Using FABRIK with Rotation Limits:
+
+Simply add a Rotation Limit component (RotationLimitAngle, RotationLimitHinge, RotationLimitPolygonal or RotationLimitSpline) to a bone that has been assigned to the "Bones" of the FABRIK component. Note that each rotation limit decreases the stability and continuity of the solver. If FABRIK is unable to solve a highly constrained chain at certain target positions, it is most likely not a bug with FinalIK, but a fundamental handicap of the FABRIK algorithm (remember, no IK algorithm is perfect).
+
+FABRIK.png
+
+
+Component variables:
+
+fixTransforms - if true, will fix all the Transforms used by the solver to their initial state in each Update. This prevents potential problems with unanimated bones and animator culling with a small cost of performance
+
+
+Solver variables:
+
+target - the target Transform. If assigned, solver IKPosition will be automatically set to the position of the target.
+weight - the solver weight for smoothly blending out the effect of the IK
+tolerance - minimum distance from last reached position. Will stop solving if difference from previous reached position is less than tolerance. If tolerance is zero, will iterate until maxIterations.
+maxIterations - max iterations per frame. If tolerance is 0, will always iterate until maxIterations
+useRotationLimits - if true, will use any RotationLimit component attached to the bones
+bones - bones used by the solver to reach to the target. All bones need to be sorted in descending order (parents first). Bones can be skipped in the hierarchy. The bone hierarchy can not be branched, meaning you cant assing bones from both hands. Bone weight determines how strongly it is used by the solver.
+FABRIKComponent.png
+
+
+Script References:
+
+Solver
+Component
