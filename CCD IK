@@ -1,0 +1,56 @@
+CCD IK
+CCD (Cyclic Coordinate Descent) is one of the simplest and most popular inverse kinematics methods that has been extensively used in the computer games industry. The main idea behind the solver is to align one joint with the end effector and the target at a time, so that the last bone of the chain iteratively gets closer to the target. CCD is very fast and reliable even with rotation limits applied. CCD tends to overemphasise the rotations of the bones closer to the target position (a very long CCD chain would just roll in around its target). Reducing bone weight down the hierarchy will compensate for this effect. It is designed to handle serial chains, thus, it is difficult to extend to problems with multiple end effectors (in this case go with FABRIK). It also takes a lot of iterations to fully extend the chain.
+
+Monitoring and validating the IK chain each frame would be expensive on the performance, therefore changing the bone hierarchy in runtime has to be done by calling SetChain (Transform[] hierarchy) on the solver. SetChain returns true if the hierarchy is valid. CCD allows for direct editing of its bones' rotations (not by the scene view handles though), but not positions, meaning you can write a script that rotates the bones in a CCD chain each frame, but you should not try to change the bone positions like you can do with a FABRIK solver. You can, however, rescale the bones at will, CCD does not care about bone lengths.
+
+
+
+Getting started:
+
+Add the CCDIK component to the first GameObject in the chain
+Assign all the elements in the chain to "Bones" in the component. Parents first, bones can be skipped.
+Press Play, set weight to 1
+
+
+Changing the target position:
+
+public CCDIK ccdIK;
+void LateUpdate () {
+    ccdIK.solver.IKPosition = something;
+}
+
+
+Adding CCDIK in runtime:
+
+Add the CCDIK component via script
+Call CCDIK.solver.SetChain()
+
+
+Using CCD with Rotation Limits:
+
+Simply add a Rotation Limit component (RotationLimitAngle, RotationLimitHinge, RotationLimitPolygonal or RotationLimitSpline) to a bone that has been assigned to the "Bones" of the CCDIK component. Note that each rotation limit decreases the stability and continuity of the solver. If CCDIK is unable to solve a highly constrained chain at certain target positions, it is most likely not a bug with FinalIK, but a fundamental handicap of the CCD algorithm (remember, no IK algorithm is perfect).
+
+CCD.png
+CCD with rotation limits applied
+
+
+Component variables:
+
+fixTransforms - if true, will fix all the Transforms used by the solver to their initial state in each Update. This prevents potential problems with unanimated bones and animator culling with a small cost of performance
+
+
+Solver variables:
+
+target - the target Transform. If assigned, solver IKPosition will be automatically set to the position of the target.
+weight - the solver weight for smoothly blending out the effect of the IK
+tolerance - minimum distance from last reached position. Will stop solving if difference from previous reached position is less than tolerance. If tolerance is zero, will iterate until maxIterations.
+maxIterations - max iterations per frame. If tolerance is 0, will always iterate until maxIterations
+useRotationLimits - if true, will use any RotationLimit component attached to the bones
+bones - bones used by the solver to reach to the target. All bones need to be sorted in descending order (parents first). Bones can be skipped in the hierarchy. The bone hierarchy can not be branched, meaning you cant assing bones from both hands. Bone weight determines how strongly it is used by the solver.
+CCDComponent.png
+
+
+Script References:
+
+Solver
+Component
