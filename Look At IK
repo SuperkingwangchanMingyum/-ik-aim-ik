@@ -1,0 +1,65 @@
+Look At IK
+LookAt IK can be used on any character or other hierarchy of bones to rotate a set of bones to face a target.
+Note that if LookAtIK does not fit you requirements, you can also use AimIK, that is very similar, but provides a different set of parameters, to make characters (especially non-biped) look at targets.
+
+
+
+Getting started:
+
+Add the LookAtIK component to the root GameObject. That GameObject's forward axis will be the forward direction.
+Assing Spine, head and eye bones to the component.
+Press Play.
+
+
+Getting started with scripting:
+
+public LookAtIK lookAt;
+void LateUpdate () {
+    lookAt.solver.IKPositionWeight = 1f; // The master weight
+    
+    lookAt.solver.IKPosition = something; // Changing the look at target
+    // Changing the weights of individual body parts
+    lookAt.solver.bodyWeight = 1f;
+    lookAt.solver.headWeight = 1f;
+    lookAt.solver.eyesWeight = 1f;
+    // Changing the clamp weight of individual body parts
+    lookAt.solver.clampWeight = 1f;
+    lookAt.solver.clampWeightHead = 1f;
+    lookAt.solver.clampWeightEyes = 1f;
+}
+
+
+Adding LookAtIK in runtime:
+
+Add the LookAtIK component using GameObject.AddComponent().
+Call LookAtIK.solver.SetChain().
+LookAtIK.png
+
+
+Component variables:
+
+fixTransforms - if true, will fix all the Transforms used by the solver to their initial state in each Update. This prevents potential problems with unanimated bones and animator culling with a small cost of performance
+
+
+Solver variables:
+
+target - the target Transform. If assigned, solver IKPosition will be automatically set to the position of the target
+weight - the master weight of the solver (multiplies all the other weights)
+bodyWeight - the weight of rotating the spine bones
+headWeight - the weight of rotating the head bone
+eyesWeight - the weight of rotating the eye bones
+clampWeight - clamping rotation of the spine bones. 0 is free rotation, 1 is completely clamped to zero effect
+clampWeightHead - clamping rotation of the head bone. 0 is free rotation, 1 is completely clamped to zero effect
+clampWeightEyes - clamping rotation of the eye bones. 0 is free rotation, 1 is completely clamped to zero effect
+clampSmoothing - the number of sine smoothing iterations applied to clamping to make it smoother
+spineWeightCurve - normalized weight distribution between the spine bones. The first spine bone is at "time" 0, the last spine bone is at 1
+head - the head bone
+spine - the spine bones in descending order (parents first), bones can be skipped
+eyes - the eye bones
+LookAtIKComponent.png
+
+
+Script References:
+
+Solver
+Component
