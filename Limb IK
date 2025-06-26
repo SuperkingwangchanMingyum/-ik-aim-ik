@@ -1,0 +1,69 @@
+Limb IK
+LimbIK extends TrigonometricIK to specialize on the 3-segmented hand and leg character limb types.
+
+LimbIK comes with multiple Bend Modifiers:
+
+Animation: tries to maintain bend direction as it is in the animation
+Target: rotates the bend direction with the target IKRotation
+Parent: rotates the bend direction along with the parent Transform (pelvis or clavicle)
+Arm: keeps the arm bent in a biometrically natural and relaxed way (also most expensive of the above).
+Goal: bends the arm towards the "Bend Goal" Transform.
+NOTE: Bend Modifiers are only applied if Bend Modfier Weight is greater than 0.
+
+The IKSolverLimb.maintainRotationWeight property allows to maintain the world space rotation of the last bone fixed as it was before solving the limb.
+This is most useful when we need to reposition a foot, but maintain its rotation as it was animated to ensure proper alignment with the ground surface.
+
+
+
+Getting started:
+
+Add the LimbIK component to the root of your character (the character should be facing its forward direction)
+Assign the limb bones to bone1, bone2 and bone3 in the LimbIK component (bones can be skipped, which means you can also use LimbIK on a 4-segment limb).
+Press Play
+
+
+Getting started with scripting:
+
+public LimbIK limbIK;
+void LateUpdate () {
+    // Changing the target position, rotation and weights
+    limbIK.solver.IKPosition = something;
+    limbIK.solver.IKRotation = something;
+    limbIK.solver.IKPositionWeight = something;
+    limbIK.solver.IKRotationWeight = something;
+    // Changing the automatic bend modifier
+    limbIK.solver.bendModifier = IKSolverLimb.BendModifier.Animation; // Will maintain the bending direction as it is animated.
+    limbIK.solver.bendModifier = IKSolverLimb.BendModifier.Target; // Will bend the limb with the target rotation
+    limbIK.solver.bendModifier = IKSolverLimb.BendModifier.Parent; // Will bend the limb with the parent bone (pelvis or shoulder)
+    // Will try to maintain the bend direction in the most biometrically relaxed way for the arms. 
+    // Will not work for the legs.
+    limbIK.solver.bendModifier = IKSolverLimb.BendModifier.Arm; 
+}
+
+
+Adding LimbIK in runtime:
+
+Add the LimbIK component via script
+Call LimbIK.solver.SetChain()
+LimbIK.png
+
+
+Component variables:
+
+fixTransforms - if true, will fix all the Transforms used by the solver to their initial state in each Update. This prevents potential problems with unanimated bones and animator culling with a small cost of performance
+
+
+Solver variables:
+
+bone1 - the first bone (upper arm or thigh)
+bone2 - the second bone (forearm or calf)
+bone3 - the third bone (hand or foot)
+target - the target Transform. If assigned, solver IKPosition and IKRotation will be automatically set to the position of the target
+positionWeight - the weight of solving to the target position (IKPosition)
+rotationWeight - the weight of solving to the target rotation (IKRotation)
+bendNormal - normal of the plane defined by the positions of the bones. When the limb bends, the second bone will always be positioned somewhere on that plane
+AvatarIKGoal - the AvatarIKGoal of this solver. This is only used by the "Arm" bend modifier
+maintainRotationWeight - weight of maintaining the rotation of the third bone as it was before solving
+bendModifier - a selection of automatic modifiers of the bend normal
+bendModifierWeight - the weight of the bend modifier
+LimbIKComponent.png
