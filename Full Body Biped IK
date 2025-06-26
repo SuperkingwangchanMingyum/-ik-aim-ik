@@ -1,0 +1,191 @@
+Full Body Biped IK
+Final IK includes an extremely flexible and powerful high speed lightweight FBIK solver for biped characters.
+
+FullBodyBipedIK maps any biped character to a low resolution multi-effector IK rig, solves it, and maps the result back to the character. This is done each frame in LateUpdate, after Mecanim/Legacy is done animating, so it is completely independent from the animating system.
+
+Chains: Internally, each limb and the body are instances of the FBIKChain class. The root chain is the body, consisting of a single node, and the limbs are its children. This setup forms the multi-effector IK tree around the root node.
+
+Nodes: Nodes are members of the Chains. For instance, an Arm chain contains three nodes - upper arm, forearm and the hand. Each node maintains a reference to its bone (node.transform). When the solver is processing or has finished, the solved position of the bone is stored in node.solverPosition.
+
+Effectors: FullBodyBipedIK has three types of effectors - end-effectors (hands and feet), mid-body effectors (shoulders and thighs) and multi-effectors (the body). End-effectors can be rotated while changing the rotation of mid-body and multi-effectors has no effect. Changing end-effector rotation also changes the bending direction of the limb (unless you are using bend goals to override it). The body effector is a multi-effector, meaning it also drags along both thigh effectors (to simplify positioning of the body). Effectors also have the positionOffset property that can be used to very easily manupulate with the underlaying animation. Effectors will reset their positionOffset to Vector3.zero after each solver update.
+
+Pulling, Reaching and Pushing: Each chain has the "pull" property. When all chains have pull equal to 1, pull weight is distributed equally between the limbs. That means reaching all effectors is not quaranteed if they are very far from each other. The result can be adjusted or improved by changing the "reach" parameter of the chain, increasing the solver iteration count or updating the solver more than once per frame. However, when for instance the left arm chain has pull weight equal to 1 and all others have 0, you can pull the character from its left hand to Infinity without losing contact. The Push and Push Parent values determine how much a limb transfers energy to its parent nodes when the target is in reach. Experiment with those values in the Scene view to get a better understanding of how they behave.
+
+Mapping: IKSolverFullBodyBiped solves a very low resolution high speed armature. Your character probably has a lot more bones in its spine though, it might have twist bones in the arms and shoulder or hip bones and so on. Therefore, the solver needs to map the high resolution skeleton to the low resolution solver skeleton before solving and vice versa after the solver has finished. There are 3 types of mappers - IKMappingSpine for mapping the pelvis and the spine, IKMappingLimb for the limbs (including the clavicle) and IKMappingBone for the head. You can access them through IKSolverFullBody.spineMapping, IKSolverFullBody.limbMappings and IKSolverFullBody.boneMappings
+
+FullBodyBipedIK.png
+Retargeting a single punching animation with FullBodyBipedIK
+Limitations:
+
+FullBodyBipedIK does not have effectors for the fingers and toes. Solving fingers with IK would be an overkill in most cases as there are only so few poses for the hands in a game. Using 10 4-segment constrained CCD or FABRIK chains to position the fingers however is probably something you don't want to waste your precious milliseconds on. See the Driving Rig demo to get an idea how to very quickly (and entirely in Unity) pose the fingers to an object.
+FullBodyBipedIK samples the initial pose of your character (in Start() and each time you re-initiate the solver) to find out which way the limbs should be bent. Hence the limitation - the limbs of the character at that moment should be bent in their natural directions. Some characters however are in geometrically perfect T-Pose, meaning their limbs are completely straight. Some characters even have their limbs bent slightly in the inverse direction (some Mixamo rigs for example). FullBodyBipedIK will alarm you should this problem occur. All you will have to do, is rotate the forearm or calf bones in the Scene view slightly in the direction they should be bent. Since those rotations will be overwritten in play mode by animation anyway, you should not be afraid of messing up your character.
+FullBodyBipedIK does not have elbow/knee effectors. That might change in the future should there be a practical demand for them. Elbow and knee positions can still be modified though as bend goals are supported.
+Optimize Game Objects should be disabled or at least all the bones needed by the solver (FullBodyBipedIK.references) exposed.
+Additional bones in the limbs are supported as long as their animation is twisting only. If the additional bones have swing animation, like for example wing bones, FBBIK will not solve the limb correctly.
+FullBodyBipedIK does not rotate the shoulder bone when the character is pulled by the hand. It will maintain the shoulder bone rotation relative to the chest as it is in the animation. In most cases, it is not a problem, but sometimes, especially when reaching for something above the head, having the shoulder bone rotate along would make it more realistic. In this case you should either have an underlaying reach up (procedural) animation that rotates the shoulder bone or it can also be rotated via script before the IK solver reads the character's pose. There is also a workaround script included in the demos, called ShoulderRotator, just add it to the FBBIK game object.
+When you move a limb end-effector and the effector rotation weight is 0, FBBIK will try to maintain the bending direction of the limb as it is animated. When the limb rotates close to 180 degrees from its animated direction, you will start experiencing rolling of the limb, meaning, the solver has no way to know at this point of singularity, which way to rotate the limb. Therefore if you for example have a walking animation, where the hands are down and you want to use IK to grab something from directly above the head, you will have to take the inconvenience to also animate the effector rotation or use a bend goal, to make sure the arm does not roll backwards when close to 180 degrees of angular offset. This is not a bug, it is a logical inevitability if we want to maintain the animated bending direction by default.
+FullBodyBipedIK considers all elbows and knees as 3 DOF joints with swing rotation constrained to the range of a hemisphere (Since 0.22, used to be 1 DOF). That allows for full accuracy mapping of all biped rigs, the only known limitation is that the limbs can't be inverted (broken from the knee/elbow).
+
+
+Getting started:
+
+  
+Add the FullBodyBipedIK component to the root of your character (the same GameObject that has the Animator/Animation component)
+Make sure the auto-detected biped references are correct
+Make sure the Root Node was correctly detected. It should be one of the bones in the lower spine.
+Take a look at the character in the scene view, make sure you see the FullBodyBipedIK armature on top the character.
+Press Play, weigh in the effectors
+
+
+Accessing the Effectors:
+
+public FullBodyBipedIK ik;
+void LateUpdate () {
+    ik.solver.leftHandEffector.position = something; // Set the left hand effector position to a point in world space. This has no effect if the effector's positionWeight is 0.
+    ik.solver.leftHandEffector.rotation = something; // Set the left hand effector rotation to a point in world space. This has no effect if the effector's rotationWeight is 0.
+    ik.solver.leftHandEffector.positionWeight = 1f; // Weighing in the effector position, the left hand will be pinned to ik.solver.leftHandEffector.position.
+    // Weighing in the effector rotation, the left hand and the arm will be pinned to ik.solver.leftHandEffector.rotation.
+    // Note that if you only wanted to rotate the hand, but not change the arm bending, 
+    // it is better to just rotate the hand bone after FBBIK has finished updating (use the OnPostUpdate delegate).
+    ik.solver.leftHandEffector.rotationWeight = 1f;
+    // Offsets the hand from its animated position. If effector positionWeight is 1, this has no effect.
+    // Note that the effectors will reset their positionOffset to Vector3.zero after each update, so you can (and should) use them additively. 
+    //This enables you to easily edit the value by more than one script.
+    ik.solver.leftHandEffector.positionOffset += something; 
+    
+    //The effector mode is for changing the way the limb behaves when not weighed in.
+    //Free means the node is completely at the mercy of the solver. 
+    //(If you have problems with smoothness, try changing the effector mode of the hands to MaintainAnimatedPosition or MaintainRelativePosition
+    //MaintainAnimatedPosition resets the node to the bone's animated position in each internal solver iteration. 
+    //This is most useful for the feet, because normally you need them where they are animated.
+    //MaintainRelativePositionWeight maintains the limb's position relative to the chest for the arms and hips for the legs. 
+    // So if you pull the character from the left hand, the right arm will rotate along with the chest.
+    //Normally you would not want to use this behaviour for the legs.
+    ik.solver.leftHandEffector.maintainRelativePositionWeight = 1f;
+    // The body effector is a multi-effector, meaning it also manipulates with other nodes in the solver, namely the left thigh and the right thigh
+    // so you could move the body effector around and the thigh bones with it. If we set effectChildNodes to false, the thigh nodes will not be changed by the body effector.
+    ik.solver.body.effectChildNodes = false;
+    // Other effectors: rightHandEffector, leftFootEffector, rightFootEffector, leftShoulderEffector, rightShoulderEffector, leftThighEffector, rightThighEffector, bodyEffector
+    // You can also find an effector by:
+    ik.solver.GetEffector(FullBodyBipedEffector effectorType);
+    ik.solver.GetEffector(FullBodyBipedChain chainType);
+    ik.solver.GetEndEffector(FullBodyBipedChain chainType); // Returns only hand or feet effectors
+}
+
+
+Accessing the Chains:
+
+public FullBodyBipedIK ik;
+void LateUpdate () {
+    ik.solver.leftArmChain.pull = 1f; // Changing the Pull value of the left arm
+    ik.solver.leftArmChain.reach = 0f; // Changing the Reach value of the left arm
+    // Other chains: rightArmChain, leftLegChain, rightLegChain, chain (the root chain)
+    // You can also find a chain by:
+    ik.solver.GetChain(FullBodyBipedChain chainType);
+    ik.solver.GetChain(FullBodyBipedEffector effectorType);
+}
+
+
+Accessing the Mapping:
+
+public FullBodyBipedIK ik;
+void LateUpdate () {
+    ik.solver.spineMapping.iterations = 2; // Changing the Spine Mapping Iterations
+    ik.solver.leftArmMapping.maintainRotationWeight = 1f; // Make the left hand maintain its rotation as animated.
+    ik.solver.headMapping.maintainRotationWeight = 1f; // Make the head maintain its rotation as animated.
+}
+
+
+Adding FullBodyBipedIK in runtime (UMA):
+
+using RootMotion; // Need to include the RootMotion namespace as well because of the BipedReferences
+FullBodyBipedIK ik;
+// Call this method whenever you need in runtime. 
+// Please note that FBBIK will sample the pose of the character at initiation so at the time of calling this method,
+// the limbs of the character should be bent in their natural directions.
+void AddFBBIK (GameObject go, BipedReferences references = null) {
+    if (references == null) { // Auto-detect the biped definition if we don't have it yet
+        BipedReferences.AutoDetectReferences(ref references, go.transform, BipedReferences.AutoDetectParams.Default);
+    }
+    ik = go.AddComponent<FullBodyBipedIK>(); // Adding the component
+    // Set the FBBIK to the references. You can leave the second parameter (root node) to null if you trust FBBIK to automatically set it to one of the bones in the spine.
+    ik.SetReferences(references, null);
+    // Using pre-defined limb orientations to safeguard from possible pose sampling problems (since 0.22)
+    ik.solver.SetLimbOrientations(BipedLimbOrientations.UMA); // The limb orientations definition for UMA skeletons
+    // or...
+    ik.solver.SetLimbOrientations(BipedLimbOrientations.MaxBiped); // The limb orientations definition for 3ds Max Biped skeletons
+    // or..
+    ik.solver.SetLimbOrientations(yourCustomBipedLimbOrientations); // Your custom limb orientations definition
+    // To know how to fill in the custom limb orientations definition, you should imagine your character standing in I-pose (not T-pose) with legs together and hands on the sides...
+    // The Upper Bone Forward Axis is the local axis of the thigh/upper arm bone that is facing towards character forward.
+    // Lower Bone Forward Axis is the local axis of the calf/forearm bone that is facing towards character forward.
+    // Last Bone Left Axis is the local axis of the foot/hand that is facing towards character left.
+}
+
+
+Solving the head
+
+Final IK 0.5 introduced the FBBIKHeadEffector component that enables us to use the FullBodyBipedIK component to map a character to the target position and rotation of the head. Please take a look at the "Head Effector" demo scene to see how it can be set up.
+NB! It is highly recommended to use VRIK instead of FullBodyBipedIK for VR avatars and in other scenarios where head targets are required.
+
+
+
+Optimizing FullBodyBipedIK:
+
+You can use renderer.isVisible to weigh out the solver when the character is not visible.
+Most of the time you don't need so many solver iterations and spine mapping iterations. Sine FinalIK 0.4, we are able to set solver iteration count to 0, in which case the full body effect will not be solved. This allows for easy optimization of IK on characters in the distance.
+Keep the "Reach" values at 0 if you don't need them. By default they are 0.05f to improve accuracy.
+Keep the Spine Twist Weight at 0 if you don't see the need for it.
+Also setting the "Spine Stiffness", "Pull Body Vertical" and/or "Pull Body Horizontal" to 0 will slightly help the performance.
+You don't need all the spine bones in the spine array. FBBIK works the fastest if there are 2 bones in the spine, the first one listed as the Root Node, and the other one the last bone in the spine (the last common ancestor of both arms). Having less bones in the Spine makes it more rigid, which in some cases might be even a better, more natural looking solution.
+
+
+Component variables:
+
+fixTransforms - if true, will fix all the Transforms used by the solver to their initial state in each Update. This prevents potential problems with unanimated bones and animator culling with a small cost of performance
+references - references to the character bones that FullBodyBipedIK needs to build its solver. The eyes are not necessary.
+
+
+Solver variables:
+
+rootNode - the central bone in the body. 2 triangles should be visible in the Scene view, the chest and the hips, connected by the rootNode.
+weight - the solver weight for smoothly blending out the effect of the IK
+iterations - the solver iteration count. If 0, full body effect will not be calculated. This allows for very easy optimization of IK on character in the distance.
+
+
+Body variables:
+
+Target - the target Transform of the body effector. If assigned, solver.bodyEffector.position will be automatically set to the position of the target.
+Position Weight - the position weight of the body effector. If weighed in, the body will be pinned to solver.bodyEffector.position. This overrides bodyEffector.positionOffset.
+Use Thighs - if true, any effect on the body effector will be also applied to the thigh effectors. This makes it easier to move the lower body around.
+Spine Stiffness - the stiffness of spine constraints. Lower values "crack" the spine.
+Pull Body Vertical - weight of hand effectors pulling the body vertically (relative to root rotation).
+Pull Body Horizontal - weight of hand effectors pulling the body horizontally (relative to root rotation).
+Spine Iterations - the number of iterations of the FABRIK algorithm. Not used if there are 2 bones assigned to Spine in the References.
+Spine Twist Weight - the weight of twisting the spine bones gradually to the orientation of the chest triangle. Relatively expensive, so set this to 0 if there is not much spine twisting going on.
+Maintain Head Rot - if 1, the head will be rotated back to where it was (in world space) before solving FBBIK.
+
+
+Limb variables:
+
+Target - the target Transform of the effector. If assigned, effector.position will be automatically set to the position of the target.
+Position Weight - the position weight of the effector. If weighed in, the effector bone will be pinned to effector.position. This overrides effector.positionOffset.
+Rotation Weight - the rotation weight of the effector. If weighed in, the limb will be rotated to effector.rotation. This also changes the bending direction of the limb. If the bending direction assumed by the solver is disagreeable, set rotation weight to 0 and either just rotate the hand/foot after FBBIK is done or use a Bend Goal for full precision.
+Maintain Relative Pos - if 1, the (unweighed) limb will rotate along with the chest/hip triangle.
+Pull - the weight of pulling the parent chain. If this limb is the only one to have full pull and the others have none, you will be able to pull the character from that end effector without ever loosing contact.
+Reach - pulls the first bone of the limb closer to the last bone.
+Push - the weight of the end-effector pushing the shoulder/thigh when the end-effector is close to it.
+Push Parent - the amount of push force transferred to the parent (from hand or foot to the body).
+Reach Smoothing - smoothing the effect of the Reach with the expense of some accuracy.
+Push Smoothing - smoothing the effect of the Push and Push Parent with the expense of some accuracy.
+Bend Goal - if assigned, will bend the limb to the direction from the shoulder/thigh to the Bend Goal.
+Bend Goal Weight - the weight of bending the limb towards the Bend Goal.
+Mapping Weight - if 0, the limb will not be mapped, meaning the bones of the limb will not be rotated at all even if the effectors are weighed in.
+Maintain Hand/Foot Rot - if 1, will rotate the hand/foot back to where it was (in world space) before solving FBBIK. This is usually useful for keeping the feet aligned to the surface when changing the position of the body or the height of the feet.
+FullBodyBipedIKComponent.png
+
+
+Script References:
+
+Solver
+Component
